@@ -27,7 +27,7 @@ CREATE TABLE "edge" (
 INSERT INTO "conversation" (id, title, created_at) VALUES ('demo-1', 'Demo Conversation', NOW());
 
 INSERT INTO "node" (id, type, position_x, position_y, data, conversation_id) VALUES 
-('node-1', 'input', 100, 100, '{"label": "Start"}', 'demo-1'),
+('node-1', 'default', 100, 100, '{"label": "Start"}', 'demo-1'),
 ('node-2', 'default', 100, 200, '{"label": "Middle"}', 'demo-1');
 
 INSERT INTO "edge" (id, source, target, conversation_id) VALUES 

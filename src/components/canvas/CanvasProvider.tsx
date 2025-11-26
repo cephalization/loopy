@@ -25,7 +25,7 @@ export function CanvasProvider({
   children,
 }: CanvasProviderProps) {
   const z = useZero<Schema>();
-  const selectedNodesRef = useRef<string[]>([]);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
 
   // Query Zero
@@ -37,16 +37,17 @@ export function CanvasProvider({
   );
 
   // Transform to React Flow format
+  // Use 'default' type for all nodes to get built-in React Flow selection/hover styling
   const rfNodes = useMemo(() => {
     return nodes.map((n) => ({
       id: n.id,
-      type: n.type === "conversation" ? "conversation" : "default",
+      type: "default",
       position: { x: n.positionX, y: n.positionY },
       data: n.data as Record<string, unknown>,
-      selected: selectedNodesRef.current.includes(n.id),
+      selected: selectedNodeIds.includes(n.id),
       style: { width: "auto", border: "none", background: "transparent" },
     }));
-  }, [nodes]);
+  }, [nodes, selectedNodeIds]);
 
   const rfEdges = useMemo(() => {
     return edges.map((e) => ({
@@ -106,12 +107,12 @@ export function CanvasProvider({
 
   // Selection management
   const setSelectedNodes = useCallback((nodeIds: string[]) => {
-    selectedNodesRef.current = nodeIds;
+    setSelectedNodeIds(nodeIds);
   }, []);
 
   const getSelectedNodes = useCallback(() => {
-    return selectedNodesRef.current;
-  }, []);
+    return selectedNodeIds;
+  }, [selectedNodeIds]);
 
   const getSelectedEdges = useCallback(() => {
     return selectedEdgeIds;
@@ -119,7 +120,7 @@ export function CanvasProvider({
 
   const onSelectionChange: OnSelectionChangeFunc = useCallback(
     ({ nodes, edges: selectedEdges }) => {
-      selectedNodesRef.current = nodes.map((n) => n.id);
+      setSelectedNodeIds(nodes.map((n) => n.id));
       setSelectedEdgeIds(selectedEdges.map((e) => e.id));
     },
     []
@@ -199,18 +200,13 @@ export function CanvasProvider({
           z.mutate.node.delete({ id: change.id });
         } else if (change.type === "select") {
           // Update selection state
-          if (change.selected) {
-            if (!selectedNodesRef.current.includes(change.id)) {
-              selectedNodesRef.current = [
-                ...selectedNodesRef.current,
-                change.id,
-              ];
+          setSelectedNodeIds((prev) => {
+            if (change.selected) {
+              return prev.includes(change.id) ? prev : [...prev, change.id];
+            } else {
+              return prev.filter((id) => id !== change.id);
             }
-          } else {
-            selectedNodesRef.current = selectedNodesRef.current.filter(
-              (id) => id !== change.id
-            );
-          }
+          });
         }
       });
     },
@@ -261,7 +257,7 @@ export function CanvasProvider({
     (position?: { x: number; y: number }) => {
       const node: Node = {
         id: `node-${crypto.randomUUID()}`,
-        type: "conversation",
+        type: "default",
         positionX: position?.x ?? Math.random() * 400,
         positionY: position?.y ?? Math.random() * 400,
         data: { label: "New Node", prompt: "" },

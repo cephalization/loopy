@@ -21,7 +21,12 @@ export type CanvasContextValue = {
   onSelectionChange: OnSelectionChangeFunc;
   addNode: (position?: { x: number; y: number }) => void;
   autoLayout: () => void;
-  registerGetNodes: (fn: () => Array<{ id: string; measured?: { width?: number; height?: number } }>) => void;
+  registerGetNodes: (
+    fn: () => Array<{
+      id: string;
+      measured?: { width?: number; height?: number };
+    }>
+  ) => void;
 
   // Actions (reusable for menus)
   actions: CanvasActions;
@@ -45,4 +50,3 @@ export function useCanvas() {
   }
   return context;
 }
-

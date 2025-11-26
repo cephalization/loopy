@@ -12,10 +12,9 @@ import "@xyflow/react/dist/style.css";
 import { ConversationNode } from "../ConversationNode";
 import { useCanvas } from "./useCanvas";
 
+// All nodes use ConversationNode - mapped to 'default' type for built-in selection styling
 const nodeTypes = {
-  conversation: ConversationNode,
   default: ConversationNode,
-  input: ConversationNode,
 };
 
 function FlowCanvasInner() {

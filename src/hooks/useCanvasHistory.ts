@@ -154,4 +154,3 @@ export function useCanvasHistory(handlers: UndoHandlers) {
     canRedo,
   };
 }
-
