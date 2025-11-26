@@ -30,7 +30,12 @@ Next, run all of the services, docker and frontend:
 pnpm start
 ```
 
-finally, go to http://localhost:5173 in multiple tabs
+>[!NOTE]
+>The first time you run the command, it will take a few minutes to start the database and zero cache.
+> You will see a pretty TUI for each service powered by [mprocs](https://github.com/miraclx/mprocs) showing the progress of each service.
+> You can press `q` to quit all services, or navigate between services with the arrow keys and press the keys shown in the help bar to control them.
+
+finally, go to http://localhost:5173 in multiple tabs to see that the app is running and fully multiplayer.
 
 
 ## zero quick-start
