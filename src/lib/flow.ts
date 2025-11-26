@@ -92,11 +92,15 @@ export function topologicalSort(
 
 /**
  * Recursively builds the message history for a node by traversing its parent chain.
+ * @param responseMap - Optional map of node IDs to responses generated in the current run.
+ *                      This is used during parallel execution to access responses from
+ *                      dependency nodes that have completed but aren't yet in the nodes array.
  */
 export function buildMessageHistory(
   nodeId: string,
   nodes: ReactFlowNode[],
-  edges: ReactFlowEdge[]
+  edges: ReactFlowEdge[],
+  responseMap?: Map<string, string>
 ): Message[] {
   const currentNode = nodes.find((n) => n.id === nodeId);
   if (!currentNode) return [];
@@ -108,15 +112,23 @@ export function buildMessageHistory(
 
   // Take the first parent for the main history chain
   const parent = incomers[0];
-  const parentHistory = buildMessageHistory(parent.id, nodes, edges);
+  const parentHistory = buildMessageHistory(
+    parent.id,
+    nodes,
+    edges,
+    responseMap
+  );
 
   // Add parent's prompt and response
   const parentData = parseNodeData(parent.data);
   if (parentData.prompt) {
     parentHistory.push({ role: "user", content: parentData.prompt });
   }
-  if (parentData.response) {
-    parentHistory.push({ role: "assistant", content: parentData.response });
+
+  // Use response from responseMap if available (for current run), otherwise fall back to stored data
+  const parentResponse = responseMap?.get(parent.id) ?? parentData.response;
+  if (parentResponse) {
+    parentHistory.push({ role: "assistant", content: parentResponse });
   }
 
   return parentHistory;
@@ -128,6 +140,8 @@ export type ExecuteNodeOptions = {
   edges: ReactFlowEdge[];
   apiEndpoint?: string;
   onStreamChunk?: (nodeId: string, accumulated: string) => void;
+  /** Map of node IDs to responses generated in the current run (for parallel execution) */
+  responseMap?: Map<string, string>;
 };
 
 /**
@@ -140,8 +154,9 @@ export async function executeNode({
   edges,
   apiEndpoint = "/api/generate",
   onStreamChunk,
+  responseMap,
 }: ExecuteNodeOptions): Promise<string> {
-  const messages = buildMessageHistory(node.id, nodes, edges);
+  const messages = buildMessageHistory(node.id, nodes, edges, responseMap);
 
   // Add current node's prompt
   const nodeData = parseNodeData(node.data);
