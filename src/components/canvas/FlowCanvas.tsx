@@ -37,6 +37,12 @@ function FlowCanvasInner() {
 
   const handleDoubleClick = useCallback(
     (event: MouseEvent) => {
+      // Only create node when double-clicking on the pane background
+      const target = event.target as HTMLElement;
+      if (!target.classList.contains("react-flow__pane")) {
+        return;
+      }
+
       // Convert screen coordinates to flow coordinates
       const position = screenToFlowPosition({
         x: event.clientX,
