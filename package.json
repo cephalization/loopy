@@ -12,7 +12,7 @@
     "dev:clean": "source .env && docker volume rm -f docker_zstart_pgdata && rm -rf \"${ZERO_REPLICA_FILE}\"*",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.68",

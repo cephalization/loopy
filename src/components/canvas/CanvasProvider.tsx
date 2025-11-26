@@ -1,32 +1,20 @@
-import { useCallback, useMemo } from "react";
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  Edge as ReactFlowEdge,
-  Node as ReactFlowNode,
-  OnNodesChange,
-  OnEdgesChange,
-  OnConnect,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
+import { useCallback, useMemo, ReactNode } from "react";
+import { OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
 import { useQuery, useZero } from "@rocicorp/zero/react";
 import { Schema } from "@/schema";
-import { ConversationNode } from "./ConversationNode";
-import { Button } from "@/components/ui/button";
-import { Loader2, Play, RotateCcw } from "lucide-react";
 import { useRunFlow } from "@/hooks/useRunFlow";
 import type { ReadonlyJSONValue } from "@rocicorp/zero";
+import { CanvasContext } from "./useCanvas";
 
-// Node Types
-const nodeTypes = {
-  conversation: ConversationNode,
-  default: ConversationNode,
-  input: ConversationNode,
+type CanvasProviderProps = {
+  conversationId: string;
+  children: ReactNode;
 };
 
-export function Canvas({ conversationId }: { conversationId: string }) {
+export function CanvasProvider({
+  conversationId,
+  children,
+}: CanvasProviderProps) {
   const z = useZero<Schema>();
 
   // Query Zero
@@ -38,7 +26,7 @@ export function Canvas({ conversationId }: { conversationId: string }) {
   );
 
   // Transform to React Flow format
-  const rfNodes: ReactFlowNode[] = useMemo(() => {
+  const rfNodes = useMemo(() => {
     return nodes.map((n) => ({
       id: n.id,
       type: n.type === "conversation" ? "conversation" : "default",
@@ -48,7 +36,7 @@ export function Canvas({ conversationId }: { conversationId: string }) {
     }));
   }, [nodes]);
 
-  const rfEdges: ReactFlowEdge[] = useMemo(() => {
+  const rfEdges = useMemo(() => {
     return edges.map((e) => ({
       id: e.id,
       source: e.source,
@@ -127,56 +115,32 @@ export function Canvas({ conversationId }: { conversationId: string }) {
     updateNodeData,
   });
 
+  const value = useMemo(
+    () => ({
+      nodes: rfNodes,
+      edges: rfEdges,
+      onNodesChange,
+      onEdgesChange,
+      onConnect,
+      addNode,
+      runFlow,
+      resetFlow,
+      isGenerating,
+    }),
+    [
+      rfNodes,
+      rfEdges,
+      onNodesChange,
+      onEdgesChange,
+      onConnect,
+      addNode,
+      runFlow,
+      resetFlow,
+      isGenerating,
+    ]
+  );
+
   return (
-    <div className="h-screen w-full flex flex-col">
-      <div className="h-12 border-b flex items-center px-4 justify-between bg-background z-10">
-        <span className="font-semibold">loopy</span>
-        <div className="flex gap-2">
-          <Button
-            onClick={runFlow}
-            disabled={isGenerating}
-            size="sm"
-            className="gap-2"
-          >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-            {isGenerating ? "Running..." : "Run Flow"}
-          </Button>
-          <Button
-            onClick={resetFlow}
-            disabled={isGenerating}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Reset
-          </Button>
-          <Button onClick={addNode} variant="secondary" size="sm">
-            Add Node
-          </Button>
-        </div>
-      </div>
-      <div className="flex-1">
-        <ReactFlow
-          nodes={rfNodes}
-          edges={rfEdges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          fitView
-          className="bg-muted/10"
-          colorMode="dark"
-        >
-          <Background />
-          <Controls />
-          <MiniMap />
-        </ReactFlow>
-      </div>
-    </div>
+    <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>
   );
 }

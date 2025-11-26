@@ -1,4 +1,4 @@
-import { Canvas } from "@/components/Canvas";
+import { Canvas } from "@/components/canvas";
 
 function App() {
   const conversationId = "demo-1";
