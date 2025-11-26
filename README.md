@@ -24,23 +24,14 @@ First, install dependencies:
 npm i
 ```
 
-Next, run docker:
+Next, run all of the services, docker and frontend:
 
 ```sh
-npm run dev:db-up
+npm start
 ```
 
-**In a second terminal**, run the zero cache server:
+finally, go to http://localhost:5173 in multiple tabs
 
-```sh
-npm run dev:zero-cache
-```
-
-**In a third terminal**, run the Vite dev server:
-
-```sh
-npm run dev:ui
-```
 
 ## zero quick-start
 
