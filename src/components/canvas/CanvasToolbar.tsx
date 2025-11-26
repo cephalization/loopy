@@ -29,6 +29,7 @@ import {
   CircleOff,
   Plus,
   HelpCircle,
+  Sparkles,
 } from "lucide-react";
 import { useCanvas } from "./useCanvas";
 
@@ -57,7 +58,11 @@ function Kbd({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function CanvasToolbar() {
+type CanvasToolbarProps = {
+  onOpenOnboarding?: () => void;
+};
+
+export function CanvasToolbar({ onOpenOnboarding }: CanvasToolbarProps) {
   const {
     runFlow,
     resetFlow,
@@ -145,6 +150,11 @@ export function CanvasToolbar() {
                 Help
               </MenubarTrigger>
               <MenubarContent>
+                <MenubarItem onClick={onOpenOnboarding}>
+                  <Sparkles className="h-4 w-4" />
+                  Getting Started
+                </MenubarItem>
+                <MenubarSeparator />
                 <MenubarItem onClick={() => setShowHelp(true)}>
                   <HelpCircle className="h-4 w-4" />
                   Keyboard Shortcuts
