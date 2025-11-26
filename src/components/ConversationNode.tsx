@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useZero } from "@rocicorp/zero/react";
 import { Schema } from "@/schema";
-import { Loader2, Trash2, Pencil, Check, X } from "lucide-react";
+import { Loader2, Trash2, Pencil, Check, X, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Define the specific data shape for this node type
@@ -28,6 +28,7 @@ export const ConversationNode = memo(
     const [isEditingLabel, setIsEditingLabel] = useState(false);
     const [labelValue, setLabelValue] = useState(data.label || "Untitled");
     const [prevDataLabel, setPrevDataLabel] = useState(data.label);
+    const [copied, setCopied] = useState(false);
 
     // Sync local prompt state with data.prompt if it changes externally
     // React-recommended pattern: adjust state during render instead of useEffect
@@ -98,6 +99,14 @@ export const ConversationNode = memo(
     const handleDelete = useCallback(() => {
       z.mutate.node.delete({ id });
     }, [id, z]);
+
+    const handleCopy = useCallback(() => {
+      if (data.response) {
+        navigator.clipboard.writeText(data.response);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    }, [data.response]);
 
     return (
       <Card className="w-[350px] shadow-lg border-2">
@@ -177,9 +186,26 @@ export const ConversationNode = memo(
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">
-              Response
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-muted-foreground">
+                Response
+              </label>
+              {data.response && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-5 w-5"
+                  onClick={handleCopy}
+                  title={copied ? "Copied!" : "Copy response"}
+                >
+                  {copied ? (
+                    <Check className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
+            </div>
             <div className="bg-muted/30 p-2 rounded-md text-sm min-h-[60px] max-h-[200px] overflow-y-auto whitespace-pre-wrap border">
               {data.response || (
                 <span className="text-muted-foreground italic">
