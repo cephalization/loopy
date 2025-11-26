@@ -1,8 +1,12 @@
+import { useCallback, MouseEvent } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  useReactFlow,
+  ReactFlowProvider,
+  SelectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ConversationNode } from "../ConversationNode";
@@ -14,8 +18,29 @@ const nodeTypes = {
   input: ConversationNode,
 };
 
-export function FlowCanvas() {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect } = useCanvas();
+function FlowCanvasInner() {
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    onSelectionChange,
+    addNode,
+  } = useCanvas();
+  const { screenToFlowPosition } = useReactFlow();
+
+  const handleDoubleClick = useCallback(
+    (event: MouseEvent) => {
+      // Convert screen coordinates to flow coordinates
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      addNode(position);
+    },
+    [screenToFlowPosition, addNode]
+  );
 
   return (
     <div className="flex-1">
@@ -25,8 +50,14 @@ export function FlowCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onSelectionChange={onSelectionChange}
+        onDoubleClick={handleDoubleClick}
         nodeTypes={nodeTypes}
         fitView
+        zoomOnDoubleClick={false}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
+        deleteKeyCode={null}
         className="bg-muted/10"
         colorMode="dark"
       >
@@ -35,6 +66,14 @@ export function FlowCanvas() {
         <MiniMap />
       </ReactFlow>
     </div>
+  );
+}
+
+export function FlowCanvas() {
+  return (
+    <ReactFlowProvider>
+      <FlowCanvasInner />
+    </ReactFlowProvider>
   );
 }
 

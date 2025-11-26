@@ -5,7 +5,9 @@ import {
   OnNodesChange,
   OnEdgesChange,
   OnConnect,
+  OnSelectionChangeFunc,
 } from "@xyflow/react";
+import type { CanvasActions } from "@/hooks/useCanvasActions";
 
 export type CanvasContextValue = {
   // Data
@@ -16,7 +18,15 @@ export type CanvasContextValue = {
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  addNode: () => void;
+  onSelectionChange: OnSelectionChangeFunc;
+  addNode: (position?: { x: number; y: number }) => void;
+
+  // Actions (reusable for menus)
+  actions: CanvasActions;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 
   // Flow execution
   runFlow: () => void;

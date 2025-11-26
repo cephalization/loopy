@@ -17,7 +17,9 @@
   "dependencies": {
     "@ai-sdk/openai": "^2.0.68",
     "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@rocicorp/zero": "0.24.3000000000",
     "@tailwindcss/vite": "^4.1.17",
     "@xyflow/react": "^12.9.3",
