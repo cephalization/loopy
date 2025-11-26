@@ -45,7 +45,15 @@ export function CanvasProvider({
       position: { x: n.positionX, y: n.positionY },
       data: n.data as Record<string, unknown>,
       selected: selectedNodeIds.includes(n.id),
-      style: { width: "auto", border: "none", background: "transparent" },
+      // initialWidth/Height for MiniMap before measurement, doesn't constrain actual size
+      initialWidth: 350,
+      initialHeight: 250,
+      style: {
+        width: "auto",
+        height: "auto",
+        border: "none",
+        background: "transparent",
+      },
     }));
   }, [nodes, selectedNodeIds]);
 

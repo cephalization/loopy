@@ -76,7 +76,15 @@ function FlowCanvasInner() {
       >
         <Background />
         <Controls />
-        <MiniMap />
+        <MiniMap
+          nodeColor="#6366f1"
+          nodeStrokeColor="#4f46e5"
+          nodeStrokeWidth={2}
+          maskColor="rgba(0, 0, 0, 0.6)"
+          style={{ backgroundColor: "#1a1a1a" }}
+          zoomable
+          pannable
+        />
       </ReactFlow>
     </div>
   );
