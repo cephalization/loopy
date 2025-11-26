@@ -49,6 +49,7 @@ export function Canvas({ conversationId }: { conversationId: string }) {
       type: n.type === "conversation" ? "conversation" : "default",
       position: { x: n.positionX, y: n.positionY },
       data: n.data as Record<string, unknown>,
+      style: { width: "auto", border: "none", background: "transparent" },
     }));
   }, [nodes]);
 
