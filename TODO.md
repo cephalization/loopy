@@ -10,15 +10,15 @@ A list of potential UX enhancements for the loopy canvas.
 - [x] **Box selection** - Shift+drag to select multiple nodes
 - [x] **Help dialog** - Info icon with shortcuts and tips
 - [x] **Auto-layout** - Button to automatically arrange nodes in a tree/graph layout
+- [x] **Animated edge connections** - Glow/pulse effects when connecting nodes
+- [x] **Connection hover feedback** - Valid connection targets highlighted when dragging
+- [x] **Multi-select with Shift+click** - Add nodes to selection by shift-clicking
 
 ---
 
 ## Quick Wins 🚀
 
-- [ ] **Animated edge connections** - Add glow effect when connecting nodes
 - [ ] **Snap-to-handle** - Visual snapping when dragging connections near valid targets
-- [ ] **Connection hover feedback** - Highlight valid connection targets when dragging an edge
-- [ ] **Multi-select with Shift+click** - Add nodes to selection by shift-clicking
 
 ## Medium Effort ✨
 
