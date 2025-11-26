@@ -31,7 +31,7 @@ pnpm start
 ```
 
 >[!NOTE]
->The first time you run the command, it will take a few minutes to start the database and zero cache.
+>The first time you run the command, it will take a few seconds to start the database and zero cache.
 > You will see a pretty TUI for each service powered by [mprocs](https://github.com/miraclx/mprocs) showing the progress of each service.
 > You can press `q` to quit all services, or navigate between services with the arrow keys and press the keys shown in the help bar to control them.
 
