@@ -7,7 +7,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Play, RotateCcw, Info, Command } from "lucide-react";
+import {
+  Loader2,
+  Play,
+  RotateCcw,
+  Info,
+  Command,
+  LayoutGrid,
+} from "lucide-react";
 import { useCanvas } from "./useCanvas";
 
 const isMac =
@@ -24,6 +31,7 @@ const shortcuts = [
   { keys: ["Esc"], description: "Deselect all" },
   { keys: [modKey, "Z"], description: "Undo" },
   { keys: [modKey, "Shift", "Z"], description: "Redo" },
+  { keys: [modKey, "Shift", "L"], description: "Auto layout" },
 ];
 
 function Kbd({ children }: { children: React.ReactNode }) {
@@ -35,7 +43,7 @@ function Kbd({ children }: { children: React.ReactNode }) {
 }
 
 export function CanvasToolbar() {
-  const { runFlow, resetFlow, isGenerating, addNode } = useCanvas();
+  const { runFlow, resetFlow, isGenerating, addNode, autoLayout } = useCanvas();
   const [showHelp, setShowHelp] = useState(false);
 
   return (
@@ -131,6 +139,16 @@ export function CanvasToolbar() {
         >
           <RotateCcw className="h-4 w-4" />
           Reset
+        </Button>
+        <Button
+          onClick={autoLayout}
+          disabled={isGenerating}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <LayoutGrid className="h-4 w-4" />
+          Auto Layout
         </Button>
         <Button onClick={() => addNode()} variant="secondary" size="sm">
           Add Node

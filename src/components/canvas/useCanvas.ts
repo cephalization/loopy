@@ -20,6 +20,8 @@ export type CanvasContextValue = {
   onConnect: OnConnect;
   onSelectionChange: OnSelectionChangeFunc;
   addNode: (position?: { x: number; y: number }) => void;
+  autoLayout: () => void;
+  registerGetNodes: (fn: () => Array<{ id: string; measured?: { width?: number; height?: number } }>) => void;
 
   // Actions (reusable for menus)
   actions: CanvasActions;

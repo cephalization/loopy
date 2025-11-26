@@ -5,6 +5,7 @@ type KeyboardShortcutsConfig = {
   actions: CanvasActions;
   undo: () => void;
   redo: () => void;
+  autoLayout: () => void;
   enabled?: boolean;
 };
 
@@ -12,6 +13,7 @@ export function useCanvasKeyboardShortcuts({
   actions,
   undo,
   redo,
+  autoLayout,
   enabled = true,
 }: KeyboardShortcutsConfig) {
   const handleKeyDown = useCallback(
@@ -69,13 +71,20 @@ export function useCanvasKeyboardShortcuts({
       }
 
       // Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y - redo
-      if (isMod && ((event.key === "z" && event.shiftKey) || event.key === "y")) {
+      if (isMod && ((event.key.toLowerCase() === "z" && event.shiftKey) || event.key === "y")) {
         event.preventDefault();
         redo();
         return;
       }
+
+      // Cmd/Ctrl + Shift + L - auto layout
+      if (isMod && event.shiftKey && event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        autoLayout();
+        return;
+      }
     },
-    [actions, undo, redo]
+    [actions, undo, redo, autoLayout]
   );
 
   useEffect(() => {

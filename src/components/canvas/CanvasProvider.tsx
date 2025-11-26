@@ -13,6 +13,7 @@ import { useCanvasActions } from "@/hooks/useCanvasActions";
 import { useCanvasKeyboardShortcuts } from "@/hooks/useCanvasKeyboardShortcuts";
 import type { ReadonlyJSONValue } from "@rocicorp/zero";
 import { CanvasContext } from "./useCanvas";
+import dagre from "dagre";
 
 type CanvasProviderProps = {
   conversationId: string;
@@ -128,13 +129,6 @@ export function CanvasProvider({
     setSelectedNodes,
     getSelectedNodes,
     pushAction,
-  });
-
-  // Keyboard shortcuts
-  useCanvasKeyboardShortcuts({
-    actions,
-    undo,
-    redo,
   });
 
   // Track position changes for undo
@@ -266,6 +260,127 @@ export function CanvasProvider({
     [z]
   );
 
+  // Ref to hold getNodes function from React Flow (set by FlowCanvas)
+  const getReactFlowNodesRef = useRef<
+    | (() => Array<{
+        id: string;
+        measured?: { width?: number; height?: number };
+      }>)
+    | null
+  >(null);
+
+  // Allow FlowCanvas to register the getNodes function
+  const registerGetNodes = useCallback(
+    (
+      fn: () => Array<{
+        id: string;
+        measured?: { width?: number; height?: number };
+      }>
+    ) => {
+      getReactFlowNodesRef.current = fn;
+    },
+    []
+  );
+
+  // Auto-layout using dagre
+  const autoLayout = useCallback(() => {
+    if (nodes.length === 0) return;
+
+    // Default dimensions matching ConversationNode (w-[350px], estimated height)
+    const DEFAULT_WIDTH = 350;
+    const DEFAULT_HEIGHT = 320;
+
+    // Try to get measured dimensions from React Flow
+    const measuredNodes = getReactFlowNodesRef.current?.() ?? [];
+    const nodeDimensions = new Map<string, { width: number; height: number }>();
+
+    measuredNodes.forEach((n) => {
+      nodeDimensions.set(n.id, {
+        width: n.measured?.width ?? DEFAULT_WIDTH,
+        height: n.measured?.height ?? DEFAULT_HEIGHT,
+      });
+    });
+
+    // Create a new dagre graph
+    const g = new dagre.graphlib.Graph();
+    g.setGraph({
+      rankdir: "TB", // Top to bottom layout
+      nodesep: 50, // Horizontal spacing between nodes
+      ranksep: 60, // Vertical spacing between ranks
+      marginx: 50,
+      marginy: 50,
+    });
+    g.setDefaultEdgeLabel(() => ({}));
+
+    // Add nodes to the graph with their measured or default dimensions
+    nodes.forEach((node) => {
+      const dims = nodeDimensions.get(node.id) ?? {
+        width: DEFAULT_WIDTH,
+        height: DEFAULT_HEIGHT,
+      };
+      g.setNode(node.id, { width: dims.width, height: dims.height });
+    });
+
+    // Add edges to the graph
+    edges.forEach((edge) => {
+      g.setEdge(edge.source, edge.target);
+    });
+
+    // Run the layout algorithm
+    dagre.layout(g);
+
+    // Collect position changes for history
+    const positionChanges: Array<{
+      nodeId: string;
+      fromPosition: { x: number; y: number };
+      toPosition: { x: number; y: number };
+    }> = [];
+
+    // Apply the new positions
+    g.nodes().forEach((nodeId) => {
+      const nodeWithPosition = g.node(nodeId);
+      const currentNode = nodes.find((n) => n.id === nodeId);
+
+      if (nodeWithPosition && currentNode) {
+        const dims = nodeDimensions.get(nodeId) ?? {
+          width: DEFAULT_WIDTH,
+          height: DEFAULT_HEIGHT,
+        };
+        // Dagre gives center position, we need top-left
+        const newX = nodeWithPosition.x - dims.width / 2;
+        const newY = nodeWithPosition.y - dims.height / 2;
+
+        positionChanges.push({
+          nodeId,
+          fromPosition: { x: currentNode.positionX, y: currentNode.positionY },
+          toPosition: { x: newX, y: newY },
+        });
+
+        z.mutate.node.update({
+          id: nodeId,
+          positionX: newX,
+          positionY: newY,
+        });
+      }
+    });
+
+    // Push to history for undo support
+    if (positionChanges.length > 0) {
+      pushAction({
+        type: "layout_nodes",
+        positions: positionChanges,
+      });
+    }
+  }, [nodes, edges, z, pushAction]);
+
+  // Keyboard shortcuts
+  useCanvasKeyboardShortcuts({
+    actions,
+    undo,
+    redo,
+    autoLayout,
+  });
+
   const { runFlow, resetFlow, isGenerating } = useRunFlow({
     nodes: rfNodes,
     edges: rfEdges,
@@ -281,6 +396,8 @@ export function CanvasProvider({
       onConnect,
       onSelectionChange,
       addNode,
+      autoLayout,
+      registerGetNodes,
       actions,
       undo,
       redo,
@@ -298,6 +415,8 @@ export function CanvasProvider({
       onConnect,
       onSelectionChange,
       addNode,
+      autoLayout,
+      registerGetNodes,
       actions,
       undo,
       redo,

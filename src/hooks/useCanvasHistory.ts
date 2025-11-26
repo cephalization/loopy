@@ -17,6 +17,14 @@ export type HistoryAction =
       type: "duplicate_nodes";
       nodes: Node[];
       edges: Edge[];
+    }
+  | {
+      type: "layout_nodes";
+      positions: Array<{
+        nodeId: string;
+        fromPosition: { x: number; y: number };
+        toPosition: { x: number; y: number };
+      }>;
     };
 
 type UndoHandlers = {
@@ -73,6 +81,16 @@ export function useCanvasHistory(handlers: UndoHandlers) {
         // Delete all duplicated nodes (edges will be deleted via cascade)
         action.nodes.forEach((node) => handlers.deleteNode(node.id));
         break;
+      case "layout_nodes":
+        // Restore all nodes to their original positions
+        action.positions.forEach((pos) =>
+          handlers.updateNodePosition(
+            pos.nodeId,
+            pos.fromPosition.x,
+            pos.fromPosition.y
+          )
+        );
+        break;
     }
 
     redoStack.current.push(action);
@@ -109,6 +127,16 @@ export function useCanvasHistory(handlers: UndoHandlers) {
         // Re-insert all duplicated nodes and edges
         action.nodes.forEach((node) => handlers.insertNode(node));
         action.edges.forEach((edge) => handlers.insertEdge(edge));
+        break;
+      case "layout_nodes":
+        // Re-apply the layout positions
+        action.positions.forEach((pos) =>
+          handlers.updateNodePosition(
+            pos.nodeId,
+            pos.toPosition.x,
+            pos.toPosition.y
+          )
+        );
         break;
     }
 

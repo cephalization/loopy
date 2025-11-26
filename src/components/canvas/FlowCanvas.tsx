@@ -1,4 +1,4 @@
-import { useCallback, MouseEvent } from "react";
+import { useCallback, MouseEvent, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -27,8 +27,14 @@ function FlowCanvasInner() {
     onConnect,
     onSelectionChange,
     addNode,
+    registerGetNodes,
   } = useCanvas();
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getNodes } = useReactFlow();
+
+  // Register getNodes so autoLayout can access measured dimensions
+  useEffect(() => {
+    registerGetNodes(getNodes);
+  }, [registerGetNodes, getNodes]);
 
   const handleDoubleClick = useCallback(
     (event: MouseEvent) => {

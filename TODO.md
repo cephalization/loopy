@@ -9,6 +9,7 @@ A list of potential UX enhancements for the loopy canvas.
 - [x] **Undo/Redo** - Full history tracking with Cmd/Ctrl+Z support
 - [x] **Box selection** - Shift+drag to select multiple nodes
 - [x] **Help dialog** - Info icon with shortcuts and tips
+- [x] **Auto-layout** - Button to automatically arrange nodes in a tree/graph layout
 
 ---
 
@@ -23,7 +24,6 @@ A list of potential UX enhancements for the loopy canvas.
 
 - [ ] **Right-click context menu** - Add different node types, delete, duplicate, etc.
 - [ ] **Command palette** - Quick access via Cmd/Ctrl+K to search and add nodes
-- [ ] **Auto-layout** - Button to automatically arrange nodes in a tree/graph layout
 - [ ] **Auto-align** - Align selected nodes horizontally or vertically
 - [ ] **Connection validation** - Prevent invalid connections (e.g., self-loops)
 - [ ] **Copy/Paste** - Cmd/Ctrl+C/V to copy and paste nodes
