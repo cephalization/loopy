@@ -9,18 +9,21 @@ import { z } from "zod";
 export type UpdateNodeData = (nodeId: string, data: ReadonlyJSONValue) => void;
 
 /**
- * Strips the response field from node data.
+ * Strips the response and selectionState fields from node data.
+ * These are runtime-only fields that shouldn't be persisted.
  */
 export function stripResponse(
   data: Record<string, unknown>
 ): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(data).filter(([key]) => key !== "response")
+    Object.entries(data).filter(
+      ([key]) => key !== "response" && key !== "selectionState"
+    )
   );
 }
 
 /**
- * Clears all responses from all nodes.
+ * Clears all responses and selection states from all nodes.
  * Used to reset the canvas before running a flow or manually via reset button.
  */
 export function clearAllResponses(
@@ -29,7 +32,7 @@ export function clearAllResponses(
 ): void {
   for (const node of nodes) {
     const data = node.data as Record<string, unknown>;
-    if (data.response !== undefined) {
+    if (data.response !== undefined || data.selectionState !== undefined) {
       updateNodeData(node.id, stripResponse(data) as ReadonlyJSONValue);
     }
   }
@@ -45,6 +48,10 @@ export type NodeData = ReadonlyJSONValue;
 const nodeDataSchema = z.object({
   prompt: z.string().optional(),
   response: z.string().optional(),
+  label: z.string().optional(),
+  executionMode: z.enum(["all", "choose"]).optional(),
+  conditionPrompt: z.string().optional(),
+  selectionState: z.enum(["selected", "skipped"]).optional(),
 });
 
 function parseNodeData(data: unknown) {

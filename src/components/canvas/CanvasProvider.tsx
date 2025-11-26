@@ -20,6 +20,8 @@ type CanvasProviderProps = {
   children: ReactNode;
 };
 
+export type EdgeExecutionState = "selected" | "skipped" | "complete";
+
 export function CanvasProvider({
   conversationId,
   children,
@@ -27,6 +29,10 @@ export function CanvasProvider({
   const z = useZero<Schema>();
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
+  // Track edge execution states for visual feedback during flow runs
+  const [edgeExecutionStates, setEdgeExecutionStates] = useState<
+    Map<string, EdgeExecutionState>
+  >(new Map());
 
   // Query Zero
   const [nodes] = useQuery(
@@ -57,16 +63,16 @@ export function CanvasProvider({
     }));
   }, [nodes, selectedNodeIds]);
 
-  const rfEdges = useMemo(() => {
+  // Basic edge data for useRunFlow (no styling needed for graph traversal)
+  const rfEdgesBasic = useMemo(() => {
     return edges.map((e) => ({
       id: e.id,
       source: e.source,
       target: e.target,
       sourceHandle: e.sourceHandle,
       targetHandle: e.targetHandle,
-      selected: selectedEdgeIds.includes(e.id),
     }));
-  }, [edges, selectedEdgeIds]);
+  }, [edges]);
 
   // Low-level mutation helpers (for history system)
   const insertNode = useCallback(
@@ -134,10 +140,10 @@ export function CanvasProvider({
     []
   );
 
-  // Canvas actions
+  // Canvas actions (uses basic edges - styling not needed for actions)
   const actions = useCanvasActions({
     nodes: rfNodes,
-    edges: rfEdges,
+    edges: rfEdgesBasic,
     rawNodes: nodes,
     rawEdges: edges,
     conversationId,
@@ -284,6 +290,22 @@ export function CanvasProvider({
     [z]
   );
 
+  // Edge execution state management
+  const setEdgeExecutionState = useCallback(
+    (edgeId: string, state: EdgeExecutionState) => {
+      setEdgeExecutionStates((prev) => {
+        const next = new Map(prev);
+        next.set(edgeId, state);
+        return next;
+      });
+    },
+    []
+  );
+
+  const clearEdgeExecutionStates = useCallback(() => {
+    setEdgeExecutionStates(new Map());
+  }, []);
+
   // Ref to hold getNodes function from React Flow (set by FlowCanvas)
   const getReactFlowNodesRef = useRef<
     | (() => Array<{
@@ -407,9 +429,41 @@ export function CanvasProvider({
 
   const { runFlow, resetFlow, isGenerating } = useRunFlow({
     nodes: rfNodes,
-    edges: rfEdges,
+    edges: rfEdgesBasic,
     updateNodeData,
+    setEdgeExecutionState,
+    clearEdgeExecutionStates,
   });
+
+  // Styled edges for rendering - animation only while generating
+  const rfEdges = useMemo(() => {
+    return edges.map((e) => {
+      const executionState = edgeExecutionStates.get(e.id);
+
+      // Determine edge style based on execution state
+      let style: React.CSSProperties | undefined;
+      let animated = false;
+
+      if (executionState === "selected" || executionState === "complete") {
+        style = { stroke: "#22c55e", strokeWidth: 2 }; // green-500
+        // Only animate while execution is in progress
+        animated = isGenerating;
+      } else if (executionState === "skipped") {
+        style = { stroke: "#eab308", strokeWidth: 2, opacity: 0.5 }; // yellow-500
+      }
+
+      return {
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        selected: selectedEdgeIds.includes(e.id),
+        style,
+        animated,
+      };
+    });
+  }, [edges, selectedEdgeIds, edgeExecutionStates, isGenerating]);
 
   const value = useMemo(
     () => ({

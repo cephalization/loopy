@@ -7,6 +7,13 @@ import { useZero } from "@rocicorp/zero/react";
 import { Schema } from "@/schema";
 import { Loader2, Trash2, Pencil, Check, X, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Define the specific data shape for this node type
 export type ConversationNodeData = {
@@ -14,6 +21,10 @@ export type ConversationNodeData = {
   prompt?: string;
   response?: string;
   loading?: boolean;
+  executionMode?: "all" | "choose";
+  conditionPrompt?: string;
+  /** Selection state during flow execution - "selected" if chosen, "skipped" if not chosen */
+  selectionState?: "selected" | "skipped";
   [key: string]: unknown;
 };
 
@@ -29,6 +40,12 @@ export const ConversationNode = memo(
     const [labelValue, setLabelValue] = useState(data.label || "Untitled");
     const [prevDataLabel, setPrevDataLabel] = useState(data.label);
     const [copied, setCopied] = useState(false);
+    const [conditionPrompt, setConditionPrompt] = useState(
+      data.conditionPrompt || ""
+    );
+    const [prevConditionPrompt, setPrevConditionPrompt] = useState(
+      data.conditionPrompt
+    );
 
     // Sync local prompt state with data.prompt if it changes externally
     // React-recommended pattern: adjust state during render instead of useEffect
@@ -41,6 +58,12 @@ export const ConversationNode = memo(
     if (data.label !== prevDataLabel) {
       setPrevDataLabel(data.label);
       setLabelValue(data.label || "Untitled");
+    }
+
+    // Sync conditionPrompt state with data.conditionPrompt if it changes externally
+    if (data.conditionPrompt !== prevConditionPrompt) {
+      setPrevConditionPrompt(data.conditionPrompt);
+      setConditionPrompt(data.conditionPrompt || "");
     }
 
     // Focus input when entering edit mode - this is a valid effect (DOM interaction)
@@ -108,13 +131,52 @@ export const ConversationNode = memo(
       }
     }, [data.response]);
 
+    const handleExecutionModeChange = useCallback(
+      (value: "all" | "choose") => {
+        z.mutate.node.update({
+          id,
+          data: { ...data, executionMode: value },
+        });
+      },
+      [id, data, z]
+    );
+
+    const handleConditionPromptChange = useCallback(
+      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setConditionPrompt(e.target.value);
+      },
+      []
+    );
+
+    const handleConditionPromptBlur = useCallback(() => {
+      z.mutate.node.update({
+        id,
+        data: { ...data, conditionPrompt },
+      });
+    }, [id, conditionPrompt, data, z]);
+
+    const executionMode = data.executionMode || "all";
+    const selectionState = data.selectionState;
+
+    // Determine card styling based on selection state
+    const getCardClassName = () => {
+      const base = "w-[350px] shadow-lg border-2 transition-all duration-300";
+      if (selectionState === "selected") {
+        return `${base} border-green-500 ring-2 ring-green-500/20`;
+      }
+      if (selectionState === "skipped") {
+        return `${base} opacity-40 border-muted`;
+      }
+      return base;
+    };
+
     return (
-      <Card className="w-[350px] shadow-lg border-2">
+      <Card className={getCardClassName()}>
         <Handle
           type="target"
           position={Position.Top}
           isConnectable={isConnectable}
-          className="!w-3 !h-3 !bg-muted-foreground/60 !border !border-border hover:!w-3.5 hover:!h-3.5 hover:!bg-chart-1 hover:!border-chart-1 transition-all duration-150 ease-out before:content-[''] before:absolute before:w-6 before:h-6 before:-translate-x-1/2 before:-translate-y-1/2 before:left-1/2 before:top-1/2"
+          className="w-3! h-3! bg-muted-foreground/60! border! border-border! hover:w-3.5! hover:h-3.5! hover:bg-chart-1! hover:border-chart-1! transition-all duration-150 ease-out before:content-[''] before:absolute before:w-6 before:h-6 before:-translate-x-1/2 before:-translate-y-1/2 before:left-1/2 before:top-1/2"
         />
         <CardHeader className="p-3 bg-muted/50">
           <CardTitle className="text-sm font-medium flex justify-between items-center gap-2">
@@ -186,6 +248,37 @@ export const ConversationNode = memo(
             />
           </div>
           <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Child Execution
+            </label>
+            <Select
+              value={executionMode}
+              onValueChange={handleExecutionModeChange}
+            >
+              <SelectTrigger className="h-8 text-sm w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Run all children</SelectItem>
+                <SelectItem value="choose">Choose child</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {executionMode === "choose" && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Condition
+              </label>
+              <Textarea
+                placeholder="Describe when to choose each child (e.g., 'If the user asked a technical question, choose Technical Response, otherwise choose Simple Summary')"
+                value={conditionPrompt}
+                onChange={handleConditionPromptChange}
+                onBlur={handleConditionPromptBlur}
+                className="min-h-[60px] resize-none text-sm"
+              />
+            </div>
+          )}
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-muted-foreground">
                 Response
@@ -219,7 +312,7 @@ export const ConversationNode = memo(
           type="source"
           position={Position.Bottom}
           isConnectable={isConnectable}
-          className="!w-3 !h-3 !bg-muted-foreground/60 !border !border-border hover:!w-3.5 hover:!h-3.5 hover:!bg-chart-1 hover:!border-chart-1 transition-all duration-150 ease-out before:content-[''] before:absolute before:w-6 before:h-6 before:-translate-x-1/2 before:-translate-y-1/2 before:left-1/2 before:top-1/2"
+          className="w-3! h-3! bg-muted-foreground/60! border! border-border hover:w-3.5! hover:h-3.5! hover:bg-chart-1! hover:border-chart-1! transition-all duration-150 ease-out before:content-[''] before:absolute before:w-6 before:h-6 before:-translate-x-1/2 before:-translate-y-1/2 before:left-1/2 before:top-1/2"
         />
       </Card>
     );
