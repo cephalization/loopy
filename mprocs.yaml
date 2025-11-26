@@ -1,0 +1,11 @@
+procs:
+  database:
+    cmd: ["pnpm", "run", "dev:db-up"]
+    stop: { send-keys: ["<C-c>"] }
+    
+  cache:
+    cmd: ["pnpm", "run", "dev:zero-cache"]
+    
+  frontend:
+    cmd: ["pnpm", "run", "dev:ui"]
+
