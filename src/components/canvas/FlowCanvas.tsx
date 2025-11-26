@@ -65,6 +65,7 @@ function FlowCanvasInner() {
         onDoubleClick={handleDoubleClick}
         nodeTypes={nodeTypes}
         fitView
+        minZoom={0.3}
         zoomOnDoubleClick={false}
         selectionOnDrag
         selectionMode={SelectionMode.Partial}
