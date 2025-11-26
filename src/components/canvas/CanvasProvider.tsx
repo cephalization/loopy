@@ -1,4 +1,4 @@
-import { useCallback, useMemo, ReactNode, useRef } from "react";
+import { useCallback, useMemo, ReactNode, useRef, useState } from "react";
 import {
   OnNodesChange,
   OnEdgesChange,
@@ -26,6 +26,7 @@ export function CanvasProvider({
 }: CanvasProviderProps) {
   const z = useZero<Schema>();
   const selectedNodesRef = useRef<string[]>([]);
+  const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
 
   // Query Zero
   const [nodes] = useQuery(
@@ -54,8 +55,9 @@ export function CanvasProvider({
       target: e.target,
       sourceHandle: e.sourceHandle,
       targetHandle: e.targetHandle,
+      selected: selectedEdgeIds.includes(e.id),
     }));
-  }, [edges]);
+  }, [edges, selectedEdgeIds]);
 
   // Low-level mutation helpers (for history system)
   const insertNode = useCallback(
@@ -111,9 +113,17 @@ export function CanvasProvider({
     return selectedNodesRef.current;
   }, []);
 
-  const onSelectionChange: OnSelectionChangeFunc = useCallback(({ nodes }) => {
-    selectedNodesRef.current = nodes.map((n) => n.id);
-  }, []);
+  const getSelectedEdges = useCallback(() => {
+    return selectedEdgeIds;
+  }, [selectedEdgeIds]);
+
+  const onSelectionChange: OnSelectionChangeFunc = useCallback(
+    ({ nodes, edges: selectedEdges }) => {
+      selectedNodesRef.current = nodes.map((n) => n.id);
+      setSelectedEdgeIds(selectedEdges.map((e) => e.id));
+    },
+    []
+  );
 
   // Canvas actions
   const actions = useCanvasActions({
@@ -128,6 +138,7 @@ export function CanvasProvider({
     deleteEdge,
     setSelectedNodes,
     getSelectedNodes,
+    getSelectedEdges,
     pushAction,
   });
 
@@ -215,6 +226,15 @@ export function CanvasProvider({
             pushAction({ type: "delete_edge", edge });
           }
           z.mutate.edge.delete({ id: change.id });
+        } else if (change.type === "select") {
+          // Track edge selection with state to trigger re-render
+          setSelectedEdgeIds((prev) => {
+            if (change.selected) {
+              return prev.includes(change.id) ? prev : [...prev, change.id];
+            } else {
+              return prev.filter((id) => id !== change.id);
+            }
+          });
         }
       });
     },

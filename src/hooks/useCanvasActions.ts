@@ -18,6 +18,7 @@ type CanvasActionsConfig = {
   deleteEdge: (edgeId: string) => void;
   setSelectedNodes: (nodeIds: string[]) => void;
   getSelectedNodes: () => string[];
+  getSelectedEdges: () => string[];
   pushAction: (action: HistoryAction) => void;
 };
 
@@ -42,13 +43,32 @@ export function useCanvasActions({
   deleteEdge,
   setSelectedNodes,
   getSelectedNodes,
+  getSelectedEdges,
   pushAction,
 }: CanvasActionsConfig): CanvasActions {
-  // Delete all selected nodes
+  // Delete all selected nodes and edges
   const deleteSelected = useCallback(() => {
     const selectedNodeIds = getSelectedNodes();
-    if (selectedNodeIds.length === 0) return;
+    const selectedEdgeIds = getSelectedEdges();
 
+    // Delete selected edges first (that aren't connected to nodes being deleted)
+    selectedEdgeIds.forEach((edgeId) => {
+      const edge = rawEdges.find((e) => e.id === edgeId);
+      if (!edge) return;
+
+      // Skip if this edge connects to a node being deleted (will be handled with node deletion)
+      if (
+        selectedNodeIds.includes(edge.source) ||
+        selectedNodeIds.includes(edge.target)
+      ) {
+        return;
+      }
+
+      pushAction({ type: "delete_edge", edge });
+      deleteEdge(edgeId);
+    });
+
+    // Delete selected nodes
     selectedNodeIds.forEach((nodeId) => {
       const node = rawNodes.find((n) => n.id === nodeId);
       if (!node) return;
@@ -72,6 +92,7 @@ export function useCanvasActions({
     });
   }, [
     getSelectedNodes,
+    getSelectedEdges,
     rawNodes,
     rawEdges,
     pushAction,

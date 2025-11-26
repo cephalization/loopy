@@ -66,6 +66,8 @@ function FlowCanvasInner() {
         deleteKeyCode={null}
         className="bg-muted/10"
         colorMode="dark"
+        connectionRadius={30}
+        edgesFocusable
       >
         <Background />
         <Controls />
@@ -82,4 +84,3 @@ export function FlowCanvas() {
     </ReactFlowProvider>
   );
 }
-

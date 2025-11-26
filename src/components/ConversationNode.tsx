@@ -105,6 +105,7 @@ export const ConversationNode = memo(
           type="target"
           position={Position.Top}
           isConnectable={isConnectable}
+          className="!w-3 !h-3 !bg-muted-foreground/60 !border !border-border hover:!w-3.5 hover:!h-3.5 hover:!bg-chart-1 hover:!border-chart-1 transition-all duration-150 ease-out before:content-[''] before:absolute before:w-6 before:h-6 before:-translate-x-1/2 before:-translate-y-1/2 before:left-1/2 before:top-1/2"
         />
         <CardHeader className="p-3 bg-muted/50">
           <CardTitle className="text-sm font-medium flex justify-between items-center gap-2">
@@ -192,6 +193,7 @@ export const ConversationNode = memo(
           type="source"
           position={Position.Bottom}
           isConnectable={isConnectable}
+          className="!w-3 !h-3 !bg-muted-foreground/60 !border !border-border hover:!w-3.5 hover:!h-3.5 hover:!bg-chart-1 hover:!border-chart-1 transition-all duration-150 ease-out before:content-[''] before:absolute before:w-6 before:h-6 before:-translate-x-1/2 before:-translate-y-1/2 before:left-1/2 before:top-1/2"
         />
       </Card>
     );

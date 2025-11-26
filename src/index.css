@@ -119,3 +119,57 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* React Flow Handle Improvements */
+.react-flow__handle {
+  /* Subtle ring on hover */
+  &:hover {
+    box-shadow: 
+      0 0 0 3px var(--chart-1),
+      0 0 8px 2px color-mix(in oklch, var(--chart-1) 40%, transparent);
+  }
+}
+
+/* When actively connecting - pulse effect on source handle */
+.react-flow__handle.connectingfrom {
+  animation: handle-pulse 1.5s ease-in-out infinite;
+}
+
+/* Target handles get subtle highlight when connection is active */
+.react-flow__handle.connectingto {
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--chart-1) 50%, transparent);
+}
+
+/* Valid connection target - clean green accent */
+.react-flow__handle.valid {
+  background-color: var(--chart-2) !important;
+  border-color: var(--chart-2) !important;
+  box-shadow: 
+    0 0 0 3px var(--chart-2),
+    0 0 12px 2px color-mix(in oklch, var(--chart-2) 50%, transparent);
+}
+
+/* Connection line - refined stroke */
+.react-flow__connection-line {
+  stroke: var(--chart-1);
+  stroke-width: 2;
+}
+
+.react-flow__connection-path {
+  stroke: var(--chart-1);
+  stroke-width: 2;
+}
+
+/* Subtle pulse animation for active handle */
+@keyframes handle-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 0 2px var(--chart-1),
+      0 0 6px 1px color-mix(in oklch, var(--chart-1) 40%, transparent);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 4px var(--chart-1),
+      0 0 12px 3px color-mix(in oklch, var(--chart-1) 60%, transparent);
+  }
+}
