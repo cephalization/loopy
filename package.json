@@ -65,7 +65,9 @@
   ],
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@rocicorp/zero-sqlite3"
+      "@rocicorp/zero-sqlite3",
+      "esbuild",
+      "protobufjs"
     ]
   }
 }

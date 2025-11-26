@@ -21,13 +21,13 @@ it uses the following technologies:
 First, install dependencies:
 
 ```sh
-npm i
+pnpm i
 ```
 
 Next, run all of the services, docker and frontend:
 
 ```sh
-npm start
+pnpm start
 ```
 
 finally, go to http://localhost:5173 in multiple tabs
@@ -68,7 +68,7 @@ VITE_PUBLIC_SERVER=http://localhost:4848
 1. **Install Zero**
 
 ```bash
-npm install @rocicorp/zero
+pnpm install @rocicorp/zero
 ```
 
 2. **Create Schema** Define your database schema using Zero's schema builder.
@@ -160,7 +160,7 @@ If you are using Docker (referencing the example in
 [docker](docker/docker-compose.yml)), run:
 
 ```bash
-npm run dev:db-up
+pnpm run dev:db-up
 ```
 
 **2. Start the zero cache server (in a separate terminal):**
@@ -172,5 +172,5 @@ npx zero-cache
 **3. Start your React dev server**
 
 ```bash
-npm run dev # this depends on your react app setup
+pnpm run dev # this depends on your react app setup
 ```
