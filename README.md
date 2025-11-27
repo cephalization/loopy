@@ -2,6 +2,11 @@
 
 how far can vibe coding go with a bunch of new technologies?
 
+>[!WARNING]
+> Not very far apparently. I have capped the capabilities of gemini 3 or opus 4.5 at the current project scale.
+> Both models now spin forever on tasks, unable to manage implicit dependencies of the modules of the application without
+> breaking functionality.
+
 this project is a very rough prototype of a sync-engine backed multiplayer canvas llm chat app.
 
 I've built similar apps a few times by hand, but this time I want to see how far cursor agents can take me.
