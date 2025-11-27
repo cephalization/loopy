@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react";
-import type { CanvasActions } from "./useCanvasActions";
+import type { CanvasActions } from "@/components/canvas/useCanvas";
 
 type KeyboardShortcutsConfig = {
   actions: CanvasActions;

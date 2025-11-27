@@ -1,10 +1,8 @@
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useMemo } from "react";
 import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useZero } from "@rocicorp/zero/react";
-import { Schema } from "@/schema";
 import { Loader2, Trash2, Pencil, Check, X, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCanvasStore, selectNodeResponse } from "@/store";
+import { useShallow } from "zustand/react/shallow";
 
 // Define the specific data shape for this node type
 export type ConversationNodeData = {
@@ -33,7 +33,22 @@ export type ConversationNodeType = Node<ConversationNodeData>;
 
 export const ConversationNode = memo(
   ({ id, data, isConnectable, deletable }: NodeProps<ConversationNodeType>) => {
-    const z = useZero<Schema>();
+    // Get store actions - these are stable references
+    const { updateNodeData, deleteNode } = useCanvasStore(
+      useShallow((s) => ({
+        updateNodeData: s.updateNodeData,
+        deleteNode: s.deleteNode,
+      }))
+    );
+
+    // Create stable selector for this node's response
+    const nodeResponseSelector = useMemo(() => selectNodeResponse(id), [id]);
+
+    // Fine-grained subscription to this node's response only
+    // This prevents re-renders when other nodes' responses change during streaming
+    // nodeResponses is synced from Zero and updated during streaming - single source of truth
+    const { response, loading } = useCanvasStore(nodeResponseSelector);
+
     const [prompt, setPrompt] = useState(data.prompt || "");
     const [prevDataPrompt, setPrevDataPrompt] = useState(data.prompt);
     const [isEditingLabel, setIsEditingLabel] = useState(false);
@@ -48,7 +63,6 @@ export const ConversationNode = memo(
     );
 
     // Sync local prompt state with data.prompt if it changes externally
-    // React-recommended pattern: adjust state during render instead of useEffect
     if (data.prompt !== prevDataPrompt) {
       setPrevDataPrompt(data.prompt);
       setPrompt(data.prompt || "");
@@ -66,7 +80,7 @@ export const ConversationNode = memo(
       setConditionPrompt(data.conditionPrompt || "");
     }
 
-    // Focus input when entering edit mode - this is a valid effect (DOM interaction)
+    // Focus input when entering edit mode
     const labelInputRef = useCallback(
       (node: HTMLInputElement | null) => {
         if (node && isEditingLabel) {
@@ -80,12 +94,9 @@ export const ConversationNode = memo(
     const handleLabelSave = useCallback(() => {
       const trimmedLabel = labelValue.trim() || "Untitled";
       setLabelValue(trimmedLabel);
-      z.mutate.node.update({
-        id,
-        data: { ...data, label: trimmedLabel },
-      });
+      updateNodeData(id, { ...data, label: trimmedLabel });
       setIsEditingLabel(false);
-    }, [id, labelValue, data, z]);
+    }, [id, labelValue, data, updateNodeData]);
 
     const handleLabelCancel = useCallback(() => {
       setLabelValue(data.label || "Untitled");
@@ -113,32 +124,26 @@ export const ConversationNode = memo(
     );
 
     const handleBlur = useCallback(() => {
-      z.mutate.node.update({
-        id,
-        data: { ...data, prompt },
-      });
-    }, [id, prompt, data, z]);
+      updateNodeData(id, { ...data, prompt });
+    }, [id, prompt, data, updateNodeData]);
 
     const handleDelete = useCallback(() => {
-      z.mutate.node.delete({ id });
-    }, [id, z]);
+      deleteNode(id);
+    }, [id, deleteNode]);
 
     const handleCopy = useCallback(() => {
-      if (data.response) {
-        navigator.clipboard.writeText(data.response);
+      if (response) {
+        navigator.clipboard.writeText(response);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
-    }, [data.response]);
+    }, [response]);
 
     const handleExecutionModeChange = useCallback(
       (value: "all" | "choose") => {
-        z.mutate.node.update({
-          id,
-          data: { ...data, executionMode: value },
-        });
+        updateNodeData(id, { ...data, executionMode: value });
       },
-      [id, data, z]
+      [id, data, updateNodeData]
     );
 
     const handleConditionPromptChange = useCallback(
@@ -149,11 +154,8 @@ export const ConversationNode = memo(
     );
 
     const handleConditionPromptBlur = useCallback(() => {
-      z.mutate.node.update({
-        id,
-        data: { ...data, conditionPrompt },
-      });
-    }, [id, conditionPrompt, data, z]);
+      updateNodeData(id, { ...data, conditionPrompt });
+    }, [id, conditionPrompt, data, updateNodeData]);
 
     const executionMode = data.executionMode || "all";
     const selectionState = data.selectionState;
@@ -220,8 +222,8 @@ export const ConversationNode = memo(
               </span>
             )}
             <div className="flex items-center gap-1">
-              {data.loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {!data.loading && deletable && (
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {!loading && deletable && (
                 <Button
                   size="icon"
                   variant="ghost"
@@ -283,7 +285,7 @@ export const ConversationNode = memo(
               <label className="text-xs font-medium text-muted-foreground">
                 Response
               </label>
-              {data.response && (
+              {response && (
                 <Button
                   size="icon"
                   variant="ghost"
@@ -300,7 +302,7 @@ export const ConversationNode = memo(
               )}
             </div>
             <div className="bg-muted/30 p-2 rounded-md text-sm min-h-[60px] max-h-[200px] overflow-y-auto whitespace-pre-wrap border">
-              {data.response || (
+              {response || (
                 <span className="text-muted-foreground italic">
                   AI response will appear here...
                 </span>

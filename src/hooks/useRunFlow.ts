@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import {
   Node as ReactFlowNode,
   Edge as ReactFlowEdge,
@@ -7,20 +7,19 @@ import {
 } from "@xyflow/react";
 import {
   executeNode,
-  clearAllResponses,
-  UpdateNodeData,
-  stripResponse,
   buildMessageHistory,
 } from "@/lib/flow";
-
-export type EdgeExecutionState = "selected" | "skipped" | "complete";
+import type { EdgeExecutionState } from "@/store";
 
 export type UseRunFlowOptions = {
   nodes: ReactFlowNode[];
   edges: ReactFlowEdge[];
-  updateNodeData: UpdateNodeData;
-  setEdgeExecutionState?: (edgeId: string, state: EdgeExecutionState) => void;
-  clearEdgeExecutionStates?: () => void;
+  setNodeResponse: (nodeId: string, response: string, loading: boolean) => void;
+  clearNodeResponses: () => void;
+  setEdgeExecutionState: (edgeId: string, state: EdgeExecutionState) => void;
+  clearEdgeExecutionStates: () => void;
+  setIsGenerating: (generating: boolean) => void;
+  isGenerating: boolean;
 };
 
 type NodeData = {
@@ -35,7 +34,6 @@ type NodeData = {
 /**
  * Calls the choose-child API to determine which child node to execute
  * based on the parent's condition prompt.
- * Returns both the selected child ID and the reasoning.
  */
 async function chooseChild(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
@@ -71,24 +69,25 @@ async function chooseChild(
 export function useRunFlow({
   nodes,
   edges,
-  updateNodeData,
+  setNodeResponse,
+  clearNodeResponses,
   setEdgeExecutionState,
   clearEdgeExecutionStates,
+  setIsGenerating,
+  isGenerating,
 }: UseRunFlowOptions) {
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const resetFlow = useCallback(() => {
-    clearAllResponses(nodes, updateNodeData);
-    clearEdgeExecutionStates?.();
-  }, [nodes, updateNodeData, clearEdgeExecutionStates]);
+    clearNodeResponses();
+    clearEdgeExecutionStates();
+  }, [clearNodeResponses, clearEdgeExecutionStates]);
 
   const runFlow = useCallback(async () => {
     if (isGenerating) return;
     setIsGenerating(true);
 
     // Clear all responses and edge states before running
-    clearAllResponses(nodes, updateNodeData);
-    clearEdgeExecutionStates?.();
+    clearNodeResponses();
+    clearEdgeExecutionStates();
 
     try {
       // Map to store promises for each node's execution
@@ -96,10 +95,11 @@ export function useRunFlow({
       // Map to store completed responses (used by buildMessageHistory for dependencies)
       const responseMap = new Map<string, string>();
       // Map to store which child was selected for each "choose" mode parent
-      // Key: parent node ID, Value: selected child node ID
       const selectedChildMap = new Map<string, string>();
       // Set of nodes that should be skipped (not selected by conditional branching)
       const skippedNodes = new Set<string>();
+      // Track selection states locally during execution
+      const selectionStates = new Map<string, "selected" | "skipped">();
 
       /**
        * Finds edges that connect to a target node.
@@ -110,26 +110,17 @@ export function useRunFlow({
 
       /**
        * Recursively marks a node and all its descendants as skipped.
-       * Also updates the UI to show the skipped state and marks incoming edges.
        */
       const markSubtreeSkipped = (nodeId: string) => {
         console.log("[markSubtreeSkipped] Skipping node:", nodeId);
         skippedNodes.add(nodeId);
+        selectionStates.set(nodeId, "skipped");
         const node = nodes.find((n) => n.id === nodeId);
         if (node) {
-          // Update UI to show skipped state
-          const nodeBaseData = stripResponse(
-            node.data as Record<string, unknown>
-          );
-          updateNodeData(node.id, {
-            ...nodeBaseData,
-            selectionState: "skipped",
-          });
-
           // Mark incoming edges as skipped (yellow)
           const incomingEdges = findIncomingEdges(nodeId);
           for (const edge of incomingEdges) {
-            setEdgeExecutionState?.(edge.id, "skipped");
+            setEdgeExecutionState(edge.id, "skipped");
           }
 
           const children = getOutgoers(node, nodes, edges);
@@ -140,25 +131,14 @@ export function useRunFlow({
       };
 
       /**
-       * Marks a node as selected and updates the UI.
-       * Also marks the incoming edge as selected (green).
+       * Marks a node as selected.
        */
       const markNodeSelected = (nodeId: string) => {
-        const node = nodes.find((n) => n.id === nodeId);
-        if (node) {
-          const nodeBaseData = stripResponse(
-            node.data as Record<string, unknown>
-          );
-          updateNodeData(node.id, {
-            ...nodeBaseData,
-            selectionState: "selected",
-          });
-
-          // Mark incoming edges as selected (green)
-          const incomingEdges = findIncomingEdges(nodeId);
-          for (const edge of incomingEdges) {
-            setEdgeExecutionState?.(edge.id, "selected");
-          }
+        selectionStates.set(nodeId, "selected");
+        // Mark incoming edges as selected (green)
+        const incomingEdges = findIncomingEdges(nodeId);
+        for (const edge of incomingEdges) {
+          setEdgeExecutionState(edge.id, "selected");
         }
       };
 
@@ -168,28 +148,14 @@ export function useRunFlow({
       const markEdgesComplete = (nodeId: string) => {
         const incomingEdges = findIncomingEdges(nodeId);
         for (const edge of incomingEdges) {
-          // Don't overwrite selected/skipped states
-          const currentState = edges.find((e) => e.id === edge.id);
-          if (currentState && !skippedNodes.has(nodeId)) {
-            setEdgeExecutionState?.(edge.id, "complete");
+          if (!skippedNodes.has(nodeId)) {
+            setEdgeExecutionState(edge.id, "complete");
           }
         }
       };
 
       /**
-       * Creates an execution promise for a node that:
-       * 1. Waits for all dependency nodes to complete
-       * 2. Checks if this node should be skipped due to conditional branching
-       * 3. Then executes this node
-       * 4. Stores the response in responseMap
-       *
-       * This enables parallel execution: nodes automatically run in parallel
-       * when all their dependencies have completed.
-       *
-       * NOTE: We use Promise.resolve().then() to defer execution to the next
-       * microtask, ensuring all node promises are registered in the map before
-       * any execution begins. This prevents race conditions where a node tries
-       * to get a dependency's promise before it's been created.
+       * Creates an execution promise for a node.
        */
       const createNodeExecution = (
         node: ReactFlowNode
@@ -201,8 +167,6 @@ export function useRunFlow({
             label: nodeData.label,
             executionMode: nodeData.executionMode,
           });
-
-          const baseData = stripResponse(node.data as Record<string, unknown>);
 
           // Get all dependency nodes (incomers)
           const dependencies = getIncomers(node, nodes, edges);
@@ -261,12 +225,11 @@ export function useRunFlow({
             }
           }
 
-          // Set loading state
-          updateNodeData(node.id, { ...baseData, loading: true });
+          // Set loading state using fine-grained response store
+          setNodeResponse(node.id, "", true);
 
           try {
-            // Check if this node is in "choose" mode - if so, skip normal execution
-            // and just do the child selection (don't generate a response)
+            // Check if this node is in "choose" mode
             if (
               nodeData.executionMode === "choose" &&
               nodeData.conditionPrompt
@@ -282,14 +245,13 @@ export function useRunFlow({
               });
 
               if (children.length > 1) {
-                // Build message history (without executing this node)
+                // Build message history
                 const messages = buildMessageHistory(
                   node.id,
                   nodes,
                   edges,
                   responseMap
                 );
-                // Add this node's prompt to provide context for the decision
                 if (nodeData.prompt) {
                   messages.push({ role: "user", content: nodeData.prompt });
                 }
@@ -335,11 +297,7 @@ export function useRunFlow({
                 // Set the response to show the selection result
                 const response = `Selected: ${selectedLabel}\n\nReason: ${reasoning}`;
                 responseMap.set(node.id, response);
-                updateNodeData(node.id, {
-                  ...baseData,
-                  response,
-                  loading: false,
-                });
+                setNodeResponse(node.id, response, false);
 
                 // Mark edges to this node as complete
                 markEdgesComplete(node.id);
@@ -364,18 +322,15 @@ export function useRunFlow({
               }
             }
 
-            // Normal execution for non-choose nodes (or choose nodes with <= 1 child)
+            // Normal execution for non-choose nodes
             const response = await executeNode({
               node,
               nodes,
               edges,
               responseMap,
               onStreamChunk: (nodeId, accumulated) => {
-                updateNodeData(nodeId, {
-                  ...baseData,
-                  response: accumulated,
-                  loading: true,
-                });
+                // Use fine-grained response update (only this node re-renders)
+                setNodeResponse(nodeId, accumulated, true);
               },
             });
 
@@ -383,11 +338,7 @@ export function useRunFlow({
             responseMap.set(node.id, response);
 
             // Final update to clear loading
-            updateNodeData(node.id, {
-              ...baseData,
-              response,
-              loading: false,
-            });
+            setNodeResponse(node.id, response, false);
 
             // Mark edges to this node as complete (green)
             markEdgesComplete(node.id);
@@ -395,14 +346,13 @@ export function useRunFlow({
             return response;
           } catch (e) {
             console.error(`Error executing node ${node.id}:`, e);
-            updateNodeData(node.id, { ...baseData, loading: false });
+            setNodeResponse(node.id, "", false);
             return null;
           }
         });
       };
 
       // Create execution promises for all nodes
-      // The promises will automatically coordinate via dependency waiting
       for (const node of nodes) {
         nodePromises.set(node.id, createNodeExecution(node));
       }
@@ -414,7 +364,16 @@ export function useRunFlow({
     } finally {
       setIsGenerating(false);
     }
-  }, [nodes, edges, updateNodeData, isGenerating]);
+  }, [
+    nodes,
+    edges,
+    isGenerating,
+    setIsGenerating,
+    clearNodeResponses,
+    clearEdgeExecutionStates,
+    setNodeResponse,
+    setEdgeExecutionState,
+  ]);
 
-  return { runFlow, resetFlow, isGenerating };
+  return { runFlow, resetFlow };
 }
